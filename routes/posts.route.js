@@ -8,6 +8,7 @@ const {changeUserPost} = require('../middleware/postMiddleware');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { changeLikeUser } = require('../services/like.service')
 const uploadMiddleware = require('../middleware/uploadMiddleware')
+const { userIdToName } = require('../services/user.service')
 
 const upload = uploadMiddleware.single('posts')
 router.post('/upload', upload, verifyToken, (req, res) =>{
@@ -46,6 +47,47 @@ router.get('/like/:postId', verifyToken, async (req, res) => {
          }
       })
       .catch(err => res.status(400).json({ error: 'Пост не найден' }));
+});
+
+// GET api/posts/comments/add - Добавить коментарий, postId
+router.post('/comments/add', verifyToken, async (req, res) => {
+   const {comment, postId} = req.body
+   if(comment !== undefined && postId !== undefined){
+      const commentData = {
+         userId: req.user._id,
+         comment: comment
+      }
+
+      await Post.findByIdAndUpdate(postId, {
+         $addToSet: {comments: commentData}
+      })
+      .then(postData => {
+         Post.findById(postId)
+         .then(async post => {
+            if(post.comments.length > 0){
+               const newComment = post.comments[post.comments.length - 1]
+               const userName = await userIdToName(newComment.userId)
+               const commentDate = await date.calcMinutes(newComment.date)
+
+               return res.status(200).json({
+                  _id: newComment._id,
+                  userId: newComment.userId,
+                  name: userName,
+                  comment: newComment.comment,
+                  datе: commentDate
+               })
+            }
+            else{
+               return res.status(400).json({ error: 'Не удалось найти комментарий' })
+            }
+         })
+      })
+      .catch(err => res.status(400).json({ error: 'Не удалось добавить комментарий' }));
+      
+   }
+   else{
+      res.status(400).json({ error: 'Некорректные данные комментария' });
+   }
 });
 
 
@@ -97,11 +139,24 @@ router.get('/all', verifyToken, async (req, res) => {
          const nowData = new Date()
          for(post of posts){
             const userData = await User.findById(post.userId)
-
             const isBookmark = await Bookmark.findOne({userId: req.user._id, postId: post._id})
+
+            let comments = []
+            for(comment of post.comments){
+               let nameUser = await userIdToName(comment.userId)
+               await comments.push({
+                  _id: comment._id,
+                  userId: comment.userId,
+                  name: nameUser,
+                  comment: comment.comment,
+                  data: date.calcMinutes(comment.date)
+               })
+            }
 
             await postsData.push({
                ...post._doc, 
+               commentsCount: post?.comments.length?post.comments.length:0,
+               comments: comments,
                userName: userData.name, 
                imgUrlAvatar: userData.imgUrlAvatar,
                dateTitle: date.calcMinutes(post.date, nowData),
@@ -141,7 +196,6 @@ router.get('/following', verifyToken, async (req, res) => {
             const userData = await User.findById(post.userId)
 
             const isBookmark = await Bookmark.findOne({userId: req.user._id, postId: post._id})
-
             await postsData.push({
                ...post._doc, 
                userName: userData.name, 

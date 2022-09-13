@@ -19,6 +19,21 @@ var schema = new Schema({
          type: Types.ObjectId,
          ref: "User"
       }],
+   },
+   comments: {
+      type: [{
+         userId: {
+            type: Types.ObjectId,
+            ref: "User"
+         },
+         comment: {
+            type: String,
+         },
+         date: {
+            type: Date,
+            default: Date.now
+         },
+      }],
    }
 });
 
