@@ -9,6 +9,7 @@ const { verifyToken } = require('../middleware/authMiddleware');
 const { changeLikeUser } = require('../services/like.service')
 const uploadMiddleware = require('../middleware/uploadMiddleware')
 const { userIdToName } = require('../services/user.service')
+const { editСomments } = require('../services/post.service')
 
 const upload = uploadMiddleware.single('posts')
 router.post('/upload', upload, verifyToken, (req, res) =>{
@@ -141,17 +142,7 @@ router.get('/all', verifyToken, async (req, res) => {
             const userData = await User.findById(post.userId)
             const isBookmark = await Bookmark.findOne({userId: req.user._id, postId: post._id})
 
-            let comments = []
-            for(comment of post.comments){
-               let nameUser = await userIdToName(comment.userId)
-               await comments.push({
-                  _id: comment._id,
-                  userId: comment.userId,
-                  name: nameUser,
-                  comment: comment.comment,
-                  data: date.calcMinutes(comment.date)
-               })
-            }
+            const comments = await editСomments(post.comments)
 
             await postsData.push({
                ...post._doc, 
@@ -194,10 +185,14 @@ router.get('/following', verifyToken, async (req, res) => {
          const nowData = new Date()
          for(post of posts){
             const userData = await User.findById(post.userId)
-
             const isBookmark = await Bookmark.findOne({userId: req.user._id, postId: post._id})
+            const comments = await editСomments(post.comments)
+
+
             await postsData.push({
                ...post._doc, 
+               commentsCount: post?.comments.length?post.comments.length:0,
+               comments: comments,
                userName: userData.name, 
                dateTitle: date.calcMinutes(post.date, nowData),
                imgUrlAvatar: userData.imgUrlAvatar,
@@ -229,8 +224,12 @@ router.get('/bookmark/all', verifyToken, async (req, res) => {
             const postData = await Post.findById(post.postId)
             if(postData){
                const userData = await User.findById(postData.userId)
+               const comments = await editСomments(postData.comments)
+
                await postsData.unshift({
                   ...postData._doc, 
+                  commentsCount: postData?.comments.length?postData.comments.length:0,
+                  comments: comments,
                   userName: userData.name, 
                   dateTitle: date.calcMinutes(postData.date, nowData),
                   imgUrlAvatar: userData.imgUrlAvatar,
@@ -266,9 +265,12 @@ router.get('/all/:userId', verifyToken, async (req, res) => {
 
          for(post of postsUser){
             const isBookmark = await Bookmark.findOne({userId: req.user._id, postId: post._id})
+            const comments = await editСomments(post.comments)
 
             await postsData.push({
                ...post._doc, 
+               commentsCount: post?.comments.length?post.comments.length:0,
+               comments: comments,
                userName: userData.name, 
                dateTitle: date.calcMinutes(post.date, nowData),
                imgUrlAvatar: userData.imgUrlAvatar,
@@ -294,6 +296,8 @@ router.post('/', verifyToken, (req, res) => {
          const userData = await User.findById(post.userId)
          const postsData = await ({
             ...post._doc, 
+            commentsCount: 0,
+            comments: [],
             userName: userData.name, 
             imgUrlAvatar: userData.imgUrlAvatar,
             dateTitle: "Только что"

@@ -41,10 +41,10 @@ const delayFollowersUser = async (myUser, youUser) => {
 }
 
 
-const userIdToName = async (userId) => {
+const userIdData = async (userId) => {
    result = null
    await User.findById(userId)
-      .then(user => result = user.name)
+      .then(user => result = user)
    return result;
 }
 
@@ -53,5 +53,5 @@ module.exports = {
    addFollowersUser, 
    delayFollowingUser, 
    delayFollowersUser,
-   userIdToName
+   userIdData
 }
