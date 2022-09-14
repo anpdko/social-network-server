@@ -8,7 +8,7 @@ const {changeUserPost} = require('../middleware/postMiddleware');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { changeLikeUser } = require('../services/like.service')
 const uploadMiddleware = require('../middleware/uploadMiddleware')
-const { userIdToName } = require('../services/user.service')
+const { userIdData } = require('../services/user.service')
 const { editСomments } = require('../services/post.service')
 
 const upload = uploadMiddleware.single('posts')
@@ -67,13 +67,13 @@ router.post('/comments/add', verifyToken, async (req, res) => {
          .then(async post => {
             if(post.comments.length > 0){
                const newComment = post.comments[post.comments.length - 1]
-               const userName = await userIdToName(newComment.userId)
+               const user = await userIdData(newComment.userId)
                const commentDate = await date.calcMinutes(newComment.date)
 
                return res.status(200).json({
                   _id: newComment._id,
                   userId: newComment.userId,
-                  name: userName,
+                  name: user.name,
                   comment: newComment.comment,
                   datе: commentDate
                })
