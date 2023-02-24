@@ -10,6 +10,10 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({ origin: true, credentials: true })); // cors
 app.use(express.json({extensions: true})) //Для понимание сервером фаормата json
 
+app.get('/', (req, res) => {
+   res.send("Server listening on port 5000");
+})
+
 
 app.use('/static/images', express.static(path.join(__dirname, 'static/images')))
 
